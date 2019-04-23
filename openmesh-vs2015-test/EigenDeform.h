@@ -3,27 +3,30 @@
 #define EIGENDEFORM_H_
 
 // −−−−−−−−−−−−−−−−−−−− Eigen
-#include <Eigen/Sparse>
-#include <Eigen/Dense>
+//#include <Eigen/Sparse>
+//#include <Eigen/Dense>
 // --------------------
 
 #include "PGMeshTypes.h"
 #include "Eigen_inc.h"
-#include "STL_inc.h"
+#include <iostream>
+#include <vector>
+#include <string>
+#include <fstream>
+#include <sstream>
 
-//#include <GeometryProcess/AbstractUtil/BaseEntity.h>
-//#include <GeometryProcess/AbstractUtil/BaseRender.h>
-//#include <GeometryProcess/PolygonMesh/PGMeshEntity.h>
-//#include <GeometryProcess/Interaction/SelectionInteraction.h>
-//
-//
-////#include <GeometryProcess/AbstractUtil/BaseEntity.h>
-//
-//#include<GeometryProcess/EigenDeformation/STL_inc.h>
+using std::vector;
+using std::string;
+using std::pair;
+using std::cout;
+using std::endl;
+using std::ifstream;
+using std::ofstream;
+
 #include "engine.h"
-//
+
 using namespace Eigen;
-using namespace GeometryProcess;
+//using namespace GeometryProcess;
 
 typedef OpenMesh::VertexHandle VH;
 namespace GeometryProcess

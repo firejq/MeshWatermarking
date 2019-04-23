@@ -1,17 +1,17 @@
 #include "WaterMark.h"
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <time.h>
-#include <numeric>
-#include <algorithm>
+//#include <iostream>
+//#include <fstream>
+//#include <vector>
+//#include <time.h>
+//#include <numeric>
+//#include <algorithm>
+//
+//#include <sys/timeb.h>
+//#include <ctime>
+//#include <climits>
 
-#include <sys/timeb.h>
-#include <ctime>
-#include <climits>
-
-#define AREA_WATERMARK 1
-#define CLUSTER_NUM 28
+//#define AREA_WATERMARK 1
+//#define CLUSTER_NUM 28
 
 using namespace GeometryProcess;
 using namespace OpenMesh;

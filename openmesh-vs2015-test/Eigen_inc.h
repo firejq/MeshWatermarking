@@ -4,24 +4,26 @@
 
 //#define EIGEN_USE_MKL_ALL
 
-#define EIGEN_DONT_VECTORIZE
-#define EIGEN_DISABLE_UNALIGNED_ARRAY_ASSERT
-#define EIGEN_YES_I_KNOW_SPARSE_MODULE_IS_NOT_STABLE_YET
+//#define EIGEN_DONT_VECTORIZE
+//#define EIGEN_DISABLE_UNALIGNED_ARRAY_ASSERT
+//#define EIGEN_YES_I_KNOW_SPARSE_MODULE_IS_NOT_STABLE_YET
 
+////#include <Eigen/Sparse>
+//// #include <Eigen/SparseLU>
+//// #include <Eigen/SparseCholesky>
+//#include <Eigen/Dense> 
+//#include <Eigen/LU>
+//#include <Eigen/Core>
+//#include <Eigen/Geometry>
 //#include <Eigen/Sparse>
-// #include <Eigen/SparseLU>
-// #include <Eigen/SparseCholesky>
-#include <Eigen/Dense> 
-#include <Eigen/LU>
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <Eigen/Sparse>
-#include <Eigen/Cholesky>
-#include <Eigen/SVD>
-//#include <GeometryProcess/EigenDeformation/Vector2.h>
-//#include <GeometryProcess/EigenDeformation/Vector3.h>
-#include <Eigen/Geometry> 
+//#include <Eigen/Cholesky>
+//#include <Eigen/SVD>
+////#include <GeometryProcess/EigenDeformation/Vector2.h>
+////#include <GeometryProcess/EigenDeformation/Vector3.h>
+//#include <Eigen/Geometry> 
 
+#include <Eigen/Sparse>
+#include <Eigen/Dense>
 
 namespace GeometryProcess
 {

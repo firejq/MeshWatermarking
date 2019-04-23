@@ -6,8 +6,8 @@
 #include <OpenMesh/Core/Mesh/PolyMesh_ArrayKernelT.hh>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 
-namespace GeometryProcess
-{
+//namespace GeometryProcess
+//{
 	namespace PolygonMesh
 	{
 		/** this structure defines the traits of the mesh
@@ -24,9 +24,9 @@ namespace GeometryProcess
 			HalfedgeAttributes(OpenMesh::Attributes::PrevHalfedge);
 		};
 
-		typedef OpenMesh::TriMesh_ArrayKernelT<CustomTraits>  TriangularMesh;
+		//typedef OpenMesh::TriMesh_ArrayKernelT<CustomTraits>  TriangularMesh;
 		typedef OpenMesh::PolyMesh_ArrayKernelT<CustomTraits> Mesh;
 
 	}
-}
+//}
 #endif

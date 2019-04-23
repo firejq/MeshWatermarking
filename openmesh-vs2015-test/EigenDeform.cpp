@@ -4,13 +4,13 @@
 #include <math.h>
 #include <string>
 
-using namespace GeometryProcess::PolygonMesh;
+//using namespace GeometryProcess::PolygonMesh;
 //using namespace GeometryProcess::PolyhedralMesh;
 using namespace std;
 
 //This codes were writted for "Eigen Deformation of 3D Models"
-namespace GeometryProcess
-{
+//namespace GeometryProcess
+//{
 
 	EigenDeformation::EigenDeformation()
 	{
@@ -1195,4 +1195,4 @@ namespace GeometryProcess
 		return true;
 	}
 
-}
+//}

@@ -1,16 +1,16 @@
 ﻿#include <iostream>
 
 // −−−−−−−−−−−−−−−−−−−− OpenMesh
-#include "PGMeshTypes.h"
+//#include "PGMeshTypes.h"
 // --------------------
 
 // −−−−−−−−−−−−−−−−−−−− Eigen
-#include <Eigen/Sparse>
-#include <Eigen/Dense>
+//#include <Eigen/Sparse>
+//#include <Eigen/Dense>
 // --------------------
 
-using namespace Eigen;
-using namespace GeometryProcess;
+//using namespace Eigen;
+//using namespace GeometryProcess;
 
 ///////////////////////////////////
 //#include <GeometryProcess/SceneInterface/SceneInterface.h>
