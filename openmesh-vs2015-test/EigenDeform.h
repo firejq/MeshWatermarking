@@ -70,8 +70,8 @@ private:
 
 	Engine            * m_engine;//matlab引擎
 
-	RowVector3          m_bdyCenter;
-	double         m_meanDis;//均值
+	//RowVector3          m_bdyCenter;
+	//double         m_meanDis;//均值
 
 };
 

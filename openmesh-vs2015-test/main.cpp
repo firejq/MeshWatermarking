@@ -20,18 +20,9 @@ void scene_embed_wm(string mesh_model, string wm_result)
 
 	EigenDeformation eigenDef;
 	eigenDef.Init(&_mesh);//初始化网格相关参数
-
-						 /////*
-						 ////需要分割时，去掉RenderPGMeshEntity.cpp340行和362行的注释
-						 ////*/
-						 ////segmentaionMesh(_mesh);
-
-	eigenDef.calLap_Matrix(); // @firejq: 计算网格的拉普拉斯矩阵并调用matlab进行特征值分解
-	eigenDef.normVec();//将特征向量单位化
-	eigenDef.calR_Matrix();//@firejq: 计算频谱系数矩阵
 	eigenDef.embedWatermark();//way1
 							  //eigenDef.embedByL();//way2
-	
+
 	// write mesh to output.obj
 	try
 	{
@@ -82,9 +73,9 @@ void scene_extract_wm(string wm_mesh_model)
 int main() {
 	std::cout << "Hello world!" << std::endl;
 
-	//scene_embed_wm("D:\\firejq\\repo\\MeshModels\\lowpolycow\\cow.obj", "cowresult.obj");
+	scene_embed_wm("D:\\firejq\\repo\\MeshModels\\lowpolycow\\cow.obj", "cowresult.obj");
 
-	scene_extract_wm("cowresult.obj");
+	//scene_extract_wm("cowresult.obj");
 
 	return 0;
 

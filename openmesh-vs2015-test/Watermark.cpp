@@ -13,21 +13,12 @@ void WaterMark::setM(int m_m)
 	m = m_m;
 }
 
-//int WaterMark::getM()
-//{
-//	return m;
-//}
-
 //码片速率
 void WaterMark::setC(int m_c)
 {
 	c = m_c;
 }
 
-//int WaterMark::getC()
-//{
-//	return c;
-//}
 
 void WaterMark::setAlpha(double a)
 {
@@ -38,42 +29,6 @@ void WaterMark::setKey(int k)
 {
 	key = k;
 }
-
-//void WaterMark::Init(PolygonMesh::Mesh * _mesh)
-//{
-//	myMesh = _mesh;
-//	num_vtx = _mesh->n_vertices();
-//}
-
-//PolygonMesh::Mesh * WaterMark::my_embed_wm(PolygonMesh::Mesh * _mesh)
-//{
-//	EigenDeformation eigenDef;
-//	eigenDef.Init(_mesh);//初始化网格相关参数
-//
-//						 /////*
-//						 ////需要分割时，去掉RenderPGMeshEntity.cpp340行和362行的注释
-//						 ////*/
-//						 ////segmentaionMesh(_mesh);
-//
-//	eigenDef.calLap_Matrix(); // @firejq: 计算网格的拉普拉斯矩阵并调用matlab进行特征值分解
-//	eigenDef.normVec();//将特征向量单位化
-//	eigenDef.calR_Matrix();//@firejq: 计算频谱系数矩阵
-//	eigenDef.embedWatermark();//way1
-//							  //eigenDef.embedByL();//way2
-//
-//	return _mesh;
-//}
-
-//void WaterMark::my_extract_wm(PolygonMesh::Mesh * _mesh)
-//{
-//	EigenDeformation eigenDef;
-//	eigenDef.Init(_mesh);//初始化网格相关参数
-//						 //从文件中读取E矩阵时，不需重新计算
-//						 //eigenDef.calLap_Matrix();
-//						 //eigenDef.normVec();//将特征向量单位化
-//	eigenDef.extractWatermark();//way1
-//								//eigenDef.extractByL();//way2
-//}
 
 /*为VecA赋值*/
 void WaterMark::createA()

@@ -7,8 +7,8 @@ EigenDeformation::EigenDeformation()
 {
 	m_oriMesh = NULL;
 	m_engine = NULL;//初始化matlab引擎
-	m_bdyCenter.setZero();
-	m_meanDis = 0.0;//copy from yuan for segementation
+	//m_bdyCenter.setZero();
+	//m_meanDis = 0.0;//copy from yuan for segementation
 }
 //add by shiqun
 void EigenDeformation::Init(PolygonMesh::Mesh * _mesh)
@@ -398,6 +398,15 @@ bool EigenDeformation::calR_Matrix()
 
 bool EigenDeformation::embedWatermark()
 {
+	/////*
+	////需要分割时，去掉RenderPGMeshEntity.cpp340行和362行的注释
+	////*/
+	////segmentaionMesh(_mesh);
+
+	calLap_Matrix(); // @firejq: 计算网格的拉普拉斯矩阵并调用matlab进行特征值分解
+	normVec();//将特征向量单位化
+	calR_Matrix();//@firejq: 计算频谱系数矩阵
+
 	//频谱系数坐标
 	VectorXd Rs(m_vertexNum);
 	VectorXd Rt(m_vertexNum);
@@ -423,14 +432,15 @@ bool EigenDeformation::embedWatermark()
 	WaterMark mytest;
 	mytest.setM((int)ceil((double)m_vertexNum / chip_rate));//设置原始水印位数
 	mytest.setC(chip_rate);//设置码片速率
-	mytest.setAlpha(0.005);//？
-	mytest.setKey(7);//？
-	mytest.createA();
+	mytest.setAlpha(0.005);//TODO: ？
+	mytest.setKey(7);//TODO: ？
+	mytest.createA();//TODO: ?没鸟用？
 	mytest.createWB();
 	mytest.createP();
 
 
 	//将水印序列赋值到频谱系数坐标Rs/Rt/Ru中，得到修改后的频谱系数坐标Rs_hat/Rt_hat/Ru_hat
+	//TODO: vecB的长度是1188，和m_vertexNum不一样，怎么能这么搞？
 	for (int i_for_get = 0; i_for_get < m_vertexNum; i_for_get++)
 	{
 		Rs_hat[i_for_get] = Rs[i_for_get] + mytest.vecB[i_for_get] * mytest.P[i_for_get] * mytest.alpha;//Rs[i]' = Rs[i] + bi' . pi . a 
@@ -476,7 +486,10 @@ bool EigenDeformation::embedWatermark()
 		}
 	}
 	Rufile.close();
+	/*------------------------------------------------*/
 
+
+	/*将修改后的顶点坐标赋回给网格上的顶点*/
 	VectorXd  normV(m_vertexNum);//Eigen类型的数组，用作临时变量
 	for (int i_for_set = 0; i_for_set < m_vertexNum; i_for_set++)
 	{
@@ -485,9 +498,7 @@ bool EigenDeformation::embedWatermark()
 		newyCoordinate = newyCoordinate + Rt_hat[i_for_set] * normV;
 		newzCoordinate = newzCoordinate + Ru_hat[i_for_set] * normV;
 	}
-
-
-	//将修改后的顶点坐标赋回给网格上的顶点
+	
 	int vi = 0;
 	for (auto vit = m_oriMesh->vertices_begin(); vit != m_oriMesh->vertices_end(); ++vit, vi++)
 	{
