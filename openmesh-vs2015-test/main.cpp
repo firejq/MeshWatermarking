@@ -1,4 +1,4 @@
-﻿#include "EigenDeform.h"
+﻿#include "MeshWatermark.h"
 
 //嵌入水印入口
 void scene_embed_wm(string mesh_model, string wm_result)
@@ -18,10 +18,10 @@ void scene_embed_wm(string mesh_model, string wm_result)
 	//WaterMark mytest;
 	//PolygonMesh::Mesh * wm_mesh = mytest.my_embed_wm(&_mesh);
 
-	EigenDeformation eigenDef;
-	eigenDef.Init(&_mesh);//初始化网格相关参数
-	eigenDef.embedWatermark();//way1
-							  //eigenDef.embedByL();//way2
+	MeshWatermark meshWm;
+	meshWm.Init(&_mesh);//初始化网格相关参数
+	meshWm.embedWatermark();//way1
+							  //meshWm.embedByL();//way2
 
 	// write mesh to output.obj
 	try
@@ -59,13 +59,13 @@ void scene_extract_wm(string wm_mesh_model)
 	//WaterMark mytest;
 	//mytest.my_extract_wm(&_wm_mesh);
 
-	EigenDeformation eigenDef;
-	eigenDef.Init(&_wm_mesh);//初始化网格相关参数
+	MeshWatermark meshWm;
+	meshWm.Init(&_wm_mesh);//初始化网格相关参数
 						 //从文件中读取E矩阵时，不需重新计算
-						 //eigenDef.calLap_Matrix();
-						 //eigenDef.normVec();//将特征向量单位化
-	eigenDef.extractWatermark();//way1
-								//eigenDef.extractByL();//way2
+						 //meshWm.calLap_Matrix();
+						 //meshWm.normVec();//将特征向量单位化
+	meshWm.extractWatermark();//way1
+								//meshWm.extractByL();//way2
 
 }
 
@@ -73,9 +73,16 @@ void scene_extract_wm(string wm_mesh_model)
 int main() {
 	std::cout << "Hello world!" << std::endl;
 
-	scene_embed_wm("D:\\firejq\\repo\\MeshModels\\lowpolycow\\cow.obj", "cowresult.obj");
+	//string cur_path = _getcwd(NULL, 0);
+	//std::cout << cur_path << std::endl;
+	//return 0;
 
-	//scene_extract_wm("cowresult.obj");
+	string ori_mesh = "D:\\firejq\\repo\\openmesh-vs2015-test\\mesh_models\\original\\lowpolycow\\cow.obj";
+	string wm_mesh = "D:\\firejq\\repo\\openmesh-vs2015-test\\mesh_models\\watermarked\\cowresult.obj";
+
+	//scene_embed_wm(ori_mesh, wm_mesh);
+
+	scene_extract_wm(wm_mesh);
 
 	return 0;
 
