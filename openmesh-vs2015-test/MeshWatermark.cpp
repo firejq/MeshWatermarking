@@ -1,7 +1,5 @@
 #include "MeshWatermark.h"
 
-
-//This codes were writted for "Eigen Deformation of 3D Models"
 MeshWatermark::MeshWatermark()
 {
 	m_oriMesh = NULL;
@@ -9,18 +7,32 @@ MeshWatermark::MeshWatermark()
 	//m_bdyCenter.setZero();
 	//m_meanDis = 0.0;//copy from yuan for segementation
 }
-//add by shiqun
-void MeshWatermark::Init(PolygonMesh::Mesh * _mesh)
+
+void MeshWatermark::Init(PolygonMesh::Mesh * _mesh, string watermark_path, int c, double a)
 {
-	chip_rate = 7;
+	chip_rate = c;
+	alpha = a;
 	m_oriMesh = _mesh;
 	//m_wmMesh =_mesh;
 	m_vertexNum = m_oriMesh->n_vertices();
+	wm_path = watermark_path;
+}
+
+void MeshWatermark::Init(PolygonMesh::Mesh * _mesh, string watermark_path)
+{
+	chip_rate = 7;
+	alpha = 0.005;
+	m_oriMesh = _mesh;
+	//m_wmMesh =_mesh;
+	m_vertexNum = m_oriMesh->n_vertices();
+	wm_path = watermark_path;
 }
 
 //L = D - A
 void MeshWatermark::calLap_Matrix()
 {
+	std::cout << "Calculating Laplacian Matrix..." << std::endl;
+
 	MatrixXX D_matrix;//nxn度矩阵
 	MatrixXX A_matrix;//nxn邻接矩阵
 	D_matrix.setZero(m_vertexNum, m_vertexNum);
@@ -72,8 +84,8 @@ void MeshWatermark::calLap_Matrix()
 	mxArray *pL = mxCreateDoubleMatrix(m_vertexNum, m_vertexNum, mxREAL);
 	memcpy((void *)mxGetPr(pL), (void *)PL, m_vertexNum*m_vertexNum * sizeof(double));
 	engPutVariable(m_engine, "L", pL);
-	
-	engEvalString(m_engine, "cd('D:\\firejq\\repo\\openmesh-vs2015-test\\mat_code')");//调用matalab代码
+
+	engEvalString(m_engine, ("cd('" + ROOT_PATH + "mat_code')").c_str());//调用matalab代码
 
 																			//buffer用来接收调试信息，当matlab代码有错时，可以输出buffer查看错误信息
 	char buffer[255];
@@ -81,7 +93,6 @@ void MeshWatermark::calLap_Matrix()
 	engOutputBuffer(m_engine, buffer, 255);
 
 	engEvalString(m_engine, "[eigVector,eigValue] = calcLaplacian(L);");
-	//engEvalString(m_engine,"[eigVector,eigValue] = eigenDeform(L);");//只计算前6个最大的特征值
 
 	printf("%s", buffer);//当matlab代码出错时，用来输出调试信息
 
@@ -90,14 +101,14 @@ void MeshWatermark::calLap_Matrix()
 	mxArray * eigenValueObj = NULL;
 	eigenValueObj = engGetVariable(m_engine, "eigValue");
 
-	/*add by shiqun
+	/*
 	eigenValue矩阵是一个一维矩阵，矩阵元素个数为1180，每个元素是对应的特征值
 	*/
 	double  * eigenVector = NULL;
 	eigenVector = (double*)mxGetData(eigenVectorObj);
 	double  * eigenValue = NULL;
 	eigenValue = (double*)mxGetData(eigenValueObj);
-	//		
+
 	RowVectorX eVector_iter;
 	eVector_iter.resize(m_vertexNum);
 
@@ -118,15 +129,17 @@ void MeshWatermark::calLap_Matrix()
 		m_eigenValue.push_back(eigenValue[val_index]);
 	}
 }
-//add by shiqun
-//将特征向量单位化
 
+//将特征向量单位化
 void::MeshWatermark::normVec()
 {
+	std::cout << "Normalizing Eigen Vectors..." << std::endl;
+
 	m_normVector = m_eigenVector;//将特征向量复制给将要单位化的向量
 	VectorXd  normV(m_vertexNum);//声明一个Eigen中的vector类型的临时变量，用来存储一个单独的特征向量
-								 //每次将一个特征向量复制给中间变量normV，然后normV调用单位化函数，再将normV赋给m_normVector
-	for (int index = 0; index < m_vertexNum; index++)//这里把条件写成了index<1，这种粗心造成的错误真是够够的了。。
+
+	//每次将一个特征向量复制给中间变量normV，然后normV调用单位化函数，再将normV赋给m_normVector
+	for (int index = 0; index < m_vertexNum; index++)
 	{
 		normV = m_normVector[index];
 		normV.normalize();
@@ -134,11 +147,12 @@ void::MeshWatermark::normVec()
 	}
 }
 
-//add by shiqun
-//将顶点坐标投影到特征向量上,修改频谱系数，并将频谱系数反变换到原始坐标中
+//将顶点坐标投影到特征向量上，修改频谱系数，然后将频谱系数反变换到原始坐标中
 //计算频谱系数
 bool MeshWatermark::calR_Matrix()
 {
+	std::cout << "Calculating spectral coefficient matrix..." << std::endl;
+
 	//顶点坐标
 	VectorXd xCoordinate(m_vertexNum);
 	VectorXd yCoordinate(m_vertexNum);
@@ -190,7 +204,7 @@ bool MeshWatermark::calR_Matrix()
 
 	//将单位化的特征向量写入文件中
 	ofstream NormEfile;
-	NormEfile.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\Ne.txt", ios_base::out);
+	NormEfile.open(ROOT_PATH + "file\\tmp\\ori_NormEigenVector.txt", ios_base::out);
 	if (NormEfile)
 	{
 		for (int i = 0; i < m_vertexNum; i++)
@@ -199,6 +213,7 @@ bool MeshWatermark::calR_Matrix()
 			{
 				NormEfile << E_matrix(i, j) << " ";
 			}
+			//NormEfile << "\n";
 		}
 	}
 	NormEfile.close();
@@ -218,7 +233,7 @@ bool MeshWatermark::calR_Matrix()
 	buffer[254] = '\0';
 	engOutputBuffer(m_engine, buffer, 255);
 
-	engEvalString(m_engine, "cd('D:\\firejq\\repo\\openmesh-vs2015-test\\mat_code')");//shenzhen
+	engEvalString(m_engine, ("cd('" + ROOT_PATH + "mat_code')").c_str());//shenzhen
 	engEvalString(m_engine, "R = calcR(A, B);");
 
 	printf("%s", buffer);//当matlab代码出错时，用来输出调试信息
@@ -253,14 +268,11 @@ bool MeshWatermark::calR_Matrix()
 
 bool MeshWatermark::embedWatermark()
 {
-	/////*
-	////需要分割时，去掉RenderPGMeshEntity.cpp340行和362行的注释
-	////*/
-	////segmentaionMesh(_mesh);
-
 	calLap_Matrix(); // @firejq: 计算网格的拉普拉斯矩阵并调用matlab进行特征值分解
 	normVec();//将特征向量单位化
-	calR_Matrix();//@firejq: 计算频谱系数矩阵
+	calR_Matrix();//@firejq: 将顶点坐标投影到特征向量上得到频谱系数矩阵，然后根据水印修改频谱系数，再将频谱系数反变换到原始坐标中
+
+	std::cout << "Embing watermark..." << std::endl;
 
 	//频谱系数坐标
 	VectorXd Rs(m_vertexNum);
@@ -284,22 +296,22 @@ bool MeshWatermark::embedWatermark()
 	newzCoordinate.setZero();
 
 	// 创建水印序列
-	WatermarkSeq mytest;
-	mytest.setM((int)ceil((double)m_vertexNum / chip_rate));//设置原始水印位数
-	mytest.setC(chip_rate);//设置码片速率
-	mytest.setAlpha(0.005);//TODO: ？
-	mytest.setKey(7);//TODO: ？
-	mytest.createA();//TODO: ?没鸟用？
-	mytest.createWB();
-	mytest.createP();
+	WatermarkSeq wmSeq;
+	wmSeq.setM((int)ceil((double)m_vertexNum / chip_rate));//设置原始水印位数
+	wmSeq.setC(chip_rate);//设置码片速率
+	wmSeq.setAlpha(alpha);//
+	wmSeq.setKey(7);//
+	wmSeq.initWB(wm_path);//初始化水印图像的信息
+	wmSeq.createWB(m_vertexNum);//创建水印序列
+	wmSeq.createP();//创建伪随机序列 (PRNS)
 
 	//将水印序列赋值到频谱系数坐标Rs/Rt/Ru中，得到修改后的频谱系数坐标Rs_hat/Rt_hat/Ru_hat
-	//TODO: vecB的长度是1188，和m_vertexNum不一样，怎么能这么搞？
+	//vecB的长度是1188，和m_vertexNum不一样，因此如果len_VecB>len_m_vertexNum，会丢失一部分水印信息，因此要求len_VecB<=len_m_vertexNum
 	for (int i_for_get = 0; i_for_get < m_vertexNum; i_for_get++)
 	{
-		Rs_hat[i_for_get] = Rs[i_for_get] + mytest.vecB[i_for_get] * mytest.P[i_for_get] * mytest.alpha;//Rs[i]' = Rs[i] + bi' . pi . a 
-		Rt_hat[i_for_get] = Rt[i_for_get] + mytest.vecB[i_for_get] * mytest.P[i_for_get] * mytest.alpha;
-		Ru_hat[i_for_get] = Ru[i_for_get] + mytest.vecB[i_for_get] * mytest.P[i_for_get] * mytest.alpha;
+		Rs_hat[i_for_get] = Rs[i_for_get] + wmSeq.vecB[i_for_get] * wmSeq.P[i_for_get] * wmSeq.alpha;//Rs[i]' = Rs[i] + bi' . pi . a 
+		Rt_hat[i_for_get] = Rt[i_for_get] + wmSeq.vecB[i_for_get] * wmSeq.P[i_for_get] * wmSeq.alpha;
+		Ru_hat[i_for_get] = Ru[i_for_get] + wmSeq.vecB[i_for_get] * wmSeq.P[i_for_get] * wmSeq.alpha;
 	}
 
 	/**
@@ -309,7 +321,7 @@ bool MeshWatermark::embedWatermark()
 	**/
 	//Rs
 	ofstream Rsfile;
-	Rsfile.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\Rs.txt", ios_base::out);
+	Rsfile.open(ROOT_PATH + "file\\tmp\\ori_Rs.txt", ios_base::out);
 	if (Rsfile)
 	{
 		for (int i = 0; i < m_vertexNum; i++)
@@ -320,7 +332,7 @@ bool MeshWatermark::embedWatermark()
 	Rsfile.close();
 	//Rt
 	ofstream Rtfile;
-	Rtfile.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\Rt.txt", ios_base::out);
+	Rtfile.open(ROOT_PATH + "file\\tmp\\ori_Rt.txt", ios_base::out);
 	if (Rtfile)
 	{
 		for (int i = 0; i < m_vertexNum; i++)
@@ -331,7 +343,7 @@ bool MeshWatermark::embedWatermark()
 	Rtfile.close();
 	//Ru
 	ofstream Rufile;
-	Rufile.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\Ru.txt", ios_base::out);
+	Rufile.open(ROOT_PATH + "file\\tmp\\ori_Ru.txt", ios_base::out);
 	if (Rufile)
 	{
 		for (int i = 0; i < m_vertexNum; i++)
@@ -352,7 +364,7 @@ bool MeshWatermark::embedWatermark()
 		newyCoordinate = newyCoordinate + Rt_hat[i_for_set] * normV;
 		newzCoordinate = newzCoordinate + Ru_hat[i_for_set] * normV;
 	}
-	
+
 	int vi = 0;
 	for (auto vit = m_oriMesh->vertices_begin(); vit != m_oriMesh->vertices_end(); ++vit, vi++)
 	{
@@ -371,7 +383,7 @@ bool MeshWatermark::embedWatermark()
 //提取水印
 //在嵌入之前将水印信息写入文件中，
 //提取水印时，将提取出的数据也写入文件中，然后比较两个文件中的信息是否一致
-bool MeshWatermark::extractWatermark()
+bool MeshWatermark::extractWatermark(string extr_watermark)
 {
 	//原始网格与水印网格都做特征值分解，然后特征值相减
 
@@ -424,10 +436,11 @@ bool MeshWatermark::extractWatermark()
 	//	}
 	//}
 
-	////从文件中将原始网格的E矩阵读取出来
+	//从文件中将原始网格的E矩阵读取出来
+	std::cout << "Reading NormEigenVector of original mesh..." << std::endl;
 	double *pE = new double[m_vertexNum * m_vertexNum];
 	ifstream NERfile;
-	NERfile.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\Ne.txt", ios_base::in);
+	NERfile.open(ROOT_PATH + "file\\tmp\\ori_NormEigenVector.txt", ios_base::in);
 	if (NERfile)
 	{
 		// read into memory
@@ -488,7 +501,7 @@ bool MeshWatermark::extractWatermark()
 	buffer[254] = '\0';
 	engOutputBuffer(m_engine, buffer, 255);
 
-	engEvalString(m_engine, "cd('D:\\firejq\\repo\\openmesh-vs2015-test\\mat_code')");//shenzhen
+	engEvalString(m_engine, ("cd('" + ROOT_PATH + "mat_code')").c_str());//shenzhen
 	engEvalString(m_engine, "R = calcR(A, B);");
 
 	printf("%s", buffer);//当matlab代码出错时，用来输出调试信息
@@ -518,6 +531,7 @@ bool MeshWatermark::extractWatermark()
 		m_engine = NULL;
 	}
 
+	std::cout << "Reading spectral coefficient matrix of original mesh..." << std::endl;
 	//频谱系数坐标
 	VectorXd wRs(m_vertexNum);
 	VectorXd wRt(m_vertexNum);
@@ -534,7 +548,7 @@ bool MeshWatermark::extractWatermark()
 
 	//Rs
 	ifstream Rsfile;
-	Rsfile.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\Rs.txt", ios_base::in);
+	Rsfile.open(ROOT_PATH + "file\\tmp\\ori_Rs.txt", ios_base::in);
 	if (Rsfile)
 	{
 		// read into memory
@@ -557,7 +571,7 @@ bool MeshWatermark::extractWatermark()
 
 	//Rt
 	ifstream Rtfile;
-	Rtfile.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\Rt.txt", ios_base::in);
+	Rtfile.open(ROOT_PATH + "file\\tmp\\ori_Rt.txt", ios_base::in);
 	if (Rtfile)
 	{
 		// read into memory
@@ -580,7 +594,7 @@ bool MeshWatermark::extractWatermark()
 
 	//Ru
 	ifstream Rufile;
-	Rufile.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\Ru.txt", ios_base::in);
+	Rufile.open(ROOT_PATH + "file\\tmp\\ori_Ru.txt", ios_base::in);
 	if (Rufile)
 	{
 		// read into memory
@@ -601,10 +615,11 @@ bool MeshWatermark::extractWatermark()
 	}
 	Rufile.close();
 
+	std::cout << "Reading PRNS used for embing..." << std::endl;
 	//将P读取出来
 	double *P = new double[m_vertexNum];
 	ifstream Pfile;
-	Pfile.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\P.txt", ios_base::in);
+	Pfile.open(ROOT_PATH + "file\\tmp\\emb_PRNS.txt", ios_base::in);
 	if (Pfile)
 	{
 		// read into memory
@@ -628,6 +643,8 @@ bool MeshWatermark::extractWatermark()
 	}
 	Pfile.close();
 
+
+	std::cout << "Calculating the extracted watermark sequence..." << std::endl;
 	double *Qx = new double[m_vertexNum];
 	double *Qy = new double[m_vertexNum];
 	double *Qz = new double[m_vertexNum];
@@ -650,7 +667,7 @@ bool MeshWatermark::extractWatermark()
 
 	//@firejq: 将提取出的水印序列写到文件，方便调试时查看
 	ofstream Wb_extract;
-	Wb_extract.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\Wb_extract.txt", ios_base::out);
+	Wb_extract.open(ROOT_PATH + "file\\tmp\\extr_WmSeq.txt", ios_base::out);
 	if (Wb_extract)
 	{
 		for (int i = 0; i < m_vertexNum; i++)
@@ -659,13 +676,13 @@ bool MeshWatermark::extractWatermark()
 		}
 	}
 	Wb_extract.close();
+	std::cout << "The watermark sequence is extracted successfully and saved in " +
+		ROOT_PATH + "file\\extr_WmSeq.txt" << std::endl;
 
-
-
-	//将提原始的水印序列读出
+	//将原始的水印序列读出
 	double *RB = new double[m_vertexNum];
 	ifstream Wbfile;
-	Wbfile.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\Wb.txt", ios_base::in);
+	Wbfile.open(ROOT_PATH + "file\\tmp\\emb_WmSeq.txt", ios_base::in);
 	if (Wbfile)
 	{
 		// read into memory
@@ -679,6 +696,7 @@ bool MeshWatermark::extractWatermark()
 
 		// parse into array
 		std::istringstream iss(buffer);
+
 		int i = 0;
 		while (i < m_vertexNum)
 		{
@@ -690,22 +708,30 @@ bool MeshWatermark::extractWatermark()
 	Wbfile.close();
 
 	//比较读取出的Wb和提取出的wB
+	std::cout << "Comparing embWatermarkSeq with extrWatermarkSeq..." << std::endl;
 	double Bcounter = 0.0;
 	for (int bi = 0; bi < m_vertexNum; bi++)
 	{
+		//std::cout << RB[bi] << ',' << wB[bi] << std::endl;
 		if (RB[bi] == wB[bi])
 		{
 			Bcounter++;
 		}
 	}
-
 	double corr = Bcounter / (double)m_vertexNum;
-	cout << "The result is: " << corr << endl;
+	//for debug
+	//std::cout << Bcounter << std::endl;
+	//std::cout << m_vertexNum << std::endl;
+	//std::cout << corr << std::endl;
 
+	std::cout << "The comparing result is: 【" << (corr == 1 ? "true" : "false") << "】" << std::endl;
+
+	WatermarkSeq wmSeq;
+	wmSeq.initWB(wm_path);//初始化水印图像的信息
 
 	//将提取出的wB存入文件
 	//先转换为二值序列
-	for (int k = 0; k < 1186; k++)
+	for (int k = 0; k < wmSeq.wmSeqLength; k++)
 	{
 		if (wB[k] == -1)
 		{
@@ -713,15 +739,15 @@ bool MeshWatermark::extractWatermark()
 		}
 	}
 	ofstream EWbfile;
-	EWbfile.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\AMesh\\Extract\\FlowerWb.txt", ios_base::out);
+	EWbfile.open(extr_watermark, ios_base::out);
 	int i = 0;
 	if (EWbfile)
 	{
-		for (int r = 0; r < 33; r++)
+		for (int r = 0; r < wmSeq.wmImgWidth; r++)
 		{
-			for (int c = 0; c < 36; c++)
+			for (int c = 0; c < wmSeq.wmImgLength; c++)
 			{
-				if (i < 1186)
+				if (i < m_vertexNum)
 				{
 					EWbfile << wB[i++] << " ";
 				}
@@ -734,18 +760,18 @@ bool MeshWatermark::extractWatermark()
 		}
 	}
 	EWbfile.close();
-
+	std::cout << "The watermark image is saved in " + extr_watermark << std::endl;
 
 	delete[] pRs;
-	delete[]pRt;
-	delete[]pRu;
-	delete[]P;
-	delete[]Qx;
-	delete[]Qy;
-	delete[]Qz;
-	delete[]Q;
-	delete[]wB;
-	delete[]RB;
+	delete[] pRt;
+	delete[] pRu;
+	delete[] P;
+	delete[] Qx;
+	delete[] Qy;
+	delete[] Qz;
+	delete[] Q;
+	delete[] wB;
+	delete[] RB;
 
 	return true;
 }
@@ -754,6 +780,7 @@ bool MeshWatermark::extractWatermark()
 //原始水印位数
 void MeshWatermark::WatermarkSeq::setM(int m_m)
 {
+	//cout << m_m << endl;
 	m = m_m;
 }
 
@@ -774,24 +801,55 @@ void MeshWatermark::WatermarkSeq::setKey(int k)
 	key = k;
 }
 
-/*为VecA赋值*/
-void MeshWatermark::WatermarkSeq::createA()
+void MeshWatermark::WatermarkSeq::initWB(string watermark_path)
 {
-	srand(time(NULL));//随机数种子值
-	for (int i = 0; i < m; i++)
+	//把改成自动读取水印二值图片的长和宽，计算水印序列长度
+	wmImgPath = watermark_path;
+
+	ifstream Wfile;
+	Wfile.open(wmImgPath, ios_base::in);
+	if (!Wfile)
 	{
-		vecA.push_back(rand() % 2);//将A赋值为长度为m，值为0或1的随机序列
+		std::cout << "Load watermark image failed!" << std::endl;
+		exit(1);
 	}
+	// read into memory
+	Wfile.seekg(0, Wfile.end);
+	int length = Wfile.tellg();
+	Wfile.seekg(0, Wfile.beg);
+
+	char *buffer = new char[length];
+	Wfile.read(buffer, length);
+	Wfile.close();
+
+	// parse into string
+	std::istringstream iss(buffer);
+	const string content = iss.str();
+	//std::cout << "---" << std::endl;
+	//std::cout << count(content.begin(), content.end(), ' ') << std::endl;//1188
+	//std::cout << count(content.begin(), content.end(), '\n') << std::endl;//33
+	//std::cout << "---" << std::endl;
+	delete[] buffer;
+	Wfile.close();
+
+	wmSeqLength = count(content.begin(), content.end(), ' ');//1188
+	wmImgWidth = count(content.begin(), content.end(), '\n');//36
+	wmImgLength = wmSeqLength / wmImgWidth;
+
 }
 
-/*为VecB赋值，并将写入到文件Wb.txt中*/
-void MeshWatermark::WatermarkSeq::createWB()
+/*为水印序列VecB赋值，并将写入到文件中*/
+void MeshWatermark::WatermarkSeq::createWB(int m_vertexNum)
 {
-	//将二值图像转换得到的36*33的01矩阵读成长度为1188的原始的水印序列vecB
-	const int SEQ_LENGTH = 1188;//36*33=1188
-	double *B = new double[SEQ_LENGTH];
+	if (wmSeqLength > m_vertexNum) {
+		std::cout << "【warning】The length of watermark sequance is bigger than the number of mesh vertexes. "
+			<< "The extracted result will be incomplete!" << std::endl;
+	}
+
+	double *B = new double[wmSeqLength];
 	ifstream Wfile;
-	Wfile.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\AMesh\\flower.txt", ios_base::in);
+	//cout << watermark_path << endl;
+	Wfile.open(wmImgPath, ios_base::in);
 	if (Wfile)
 	{
 		// read into memory
@@ -806,7 +864,7 @@ void MeshWatermark::WatermarkSeq::createWB()
 		// parse into array
 		std::istringstream iss(buffer);
 		int i = 0;
-		while (i < SEQ_LENGTH)
+		while (i < wmSeqLength)
 		{
 			iss >> B[i++];
 		}
@@ -815,20 +873,29 @@ void MeshWatermark::WatermarkSeq::createWB()
 	}
 	Wfile.close();
 
-	for (int i = 0; i < SEQ_LENGTH/*vecA.size() * c*/; i++)
+	for (int i = 0; i < wmSeqLength; i++)
 	{
-		vecB.push_back(B[i]);
-		if (vecB[i] == 0)
-			vecB[i] = -1;
+		//cout << B[i] << ",";
+		vecB.push_back(B[i] == 0 ? -1 : 1);
 	}
 
+	//@firejq
+	//若水印长度小于顶点个数，这里先将水印长度用1补全，使得水印长度等于顶点个数
+	//在提取水印的时候再去除这部分补全的长度即可
+	if (wmSeqLength < m_vertexNum) {
+		for (int i = 0; i < m_vertexNum - wmSeqLength; i++)
+		{
+			vecB.push_back(1);
+		}
+	}
 
 	//将水印序列写入文件中
 	ofstream Wbfile;
-	Wbfile.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\Wb.txt", ios_base::out);
+	Wbfile.open(ROOT_PATH + "file\\tmp\\emb_WmSeq.txt", ios_base::out);
 	if (Wbfile)
 	{
-		for (int i = 0; i < SEQ_LENGTH/*vecA.size() * c*/; i++)
+		int length = std::max(wmSeqLength, m_vertexNum);
+		for (int i = 0; i < length; i++)
 		{
 			Wbfile << vecB[i] << " ";
 		}
@@ -836,7 +903,7 @@ void MeshWatermark::WatermarkSeq::createWB()
 	Wbfile.close();
 }
 
-/*为P赋值，并写入到文件P.txt中*/
+/*为伪随机序列P赋值，并写入到文件中*/
 void MeshWatermark::WatermarkSeq::createP()
 {
 	srand(key);//随机数种子值
@@ -847,7 +914,7 @@ void MeshWatermark::WatermarkSeq::createP()
 
 	//将P写入文件中
 	ofstream Pfile;
-	Pfile.open("D:\\firejq\\repo\\openmesh-vs2015-test\\file\\P.txt", ios_base::out);
+	Pfile.open(ROOT_PATH + "file\\tmp\\emb_PRNS.txt", ios_base::out);
 	if (Pfile)
 	{
 		for (int i = 0; i < m*c; i++)
