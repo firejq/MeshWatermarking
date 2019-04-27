@@ -63,9 +63,9 @@ void MeshWatermark::calLap_Matrix()
 	//计算拉普拉斯矩阵
 	Lap_matrix = D_matrix - A_matrix;
 
-	// 使用matlab算laplacian矩阵及特征值
+	// 使用matlab计算laplacian矩阵及特征值
 	int l_index = 0;
-	double *PL = new double[m_vertexNum*m_vertexNum];//@firejq:???
+	double *PL = new double[m_vertexNum*m_vertexNum];
 	for (int l_col = 0; l_col < m_vertexNum; l_col++)
 	{
 		for (int l_row = 0; l_row < m_vertexNum; l_row++)

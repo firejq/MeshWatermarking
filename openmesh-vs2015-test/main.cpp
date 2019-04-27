@@ -77,10 +77,10 @@ int main() {
 	std::cout << "Hello world!" << std::endl;
 	
 	/*
-		obj: cow389/deer817/cat1136/wolf1368
+		obj: cow389/deer817/cat1136/wolf1368/goat402/rat425/elephant
 		wm:  flower/heart
 	*/
-	string obj = "cat";
+	string obj = "cow";
 	string wm = "flower";
 
 	string ori_mesh = ROOT_PATH + "file\\mesh_models\\original\\lowpoly" + obj + "\\" + obj + ".obj";
