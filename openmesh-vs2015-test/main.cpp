@@ -80,19 +80,24 @@ int main() {
 		obj: cow389/deer817/cat1136/wolf1368/goat402/rat425/elephant
 		wm:  flower/heart
 	*/
-	string obj = "cow";
+	string obj = "wolf";
 	string wm = "flower";
 
 	string ori_mesh = ROOT_PATH + "file\\mesh_models\\original\\lowpoly" + obj + "\\" + obj + ".obj";
 	string wm_mesh = ROOT_PATH + "file\\mesh_models\\watermarked\\" + obj + "-result.obj";
+	//string wm_mesh_attacked = ROOT_PATH + "file\\mesh_models\\watermarked\\" + obj + "-result-laplacianSmoothing.obj";
+	//string wm_mesh_attacked = ROOT_PATH + "file\\mesh_models\\watermarked\\" + obj + "-result-scale0.8.obj";
+	string wm_mesh_attacked = ROOT_PATH + "file\\mesh_models\\watermarked\\" + obj + "-result-rotate90x.obj";
 	string emb_watermark = ROOT_PATH + "file\\wmBinaryImage\\Embed\\" + wm + ".txt";
 	string extr_watermark = ROOT_PATH + "file\\wmBinaryImage\\Extract\\extr_" + wm + "_from_" + obj + ".txt";
 	const int chip_rate = 7;
 	const double alpha = 0.005;
 	//执行嵌入
-	scene_embed_wm(ori_mesh, emb_watermark, wm_mesh, chip_rate, alpha);
+	//scene_embed_wm(ori_mesh, emb_watermark, wm_mesh, chip_rate, alpha);
 	//执行提取
-	scene_extract_wm(wm_mesh, ori_mesh, emb_watermark, extr_watermark);
+	//scene_extract_wm(wm_mesh, ori_mesh, emb_watermark, extr_watermark);
+	//对经过攻击的水印模型进行提取
+	scene_extract_wm(wm_mesh_attacked, ori_mesh, emb_watermark, extr_watermark);
 
 	return 0;
 
