@@ -13,6 +13,8 @@ A Watermarking Algorithm for 3D Meshes in the Spectral Domain.
 
 ### 2.1. Embedding
 
+The Watermarking is embed in the spectral coefficient:
+
 ![image](http://img.cdn.firejq.com/jpg/2019/5/14/d981444737044cc8518ba300e93b81a1.jpg)
 
 ### 2.2. Extracting
