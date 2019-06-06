@@ -1,5 +1,6 @@
 ﻿#include "MeshWatermark.h"
 
+
 //嵌入水印入口
 void scene_embed_wm(string mesh_model, string watermark_path, string wm_result, int c = 7, double a = 0.005)
 {
@@ -13,8 +14,8 @@ void scene_embed_wm(string mesh_model, string watermark_path, string wm_result, 
 	}
 
 	std::cout << "read original mesh successfully" << std::endl;
-	std::cout << "vertice number: " << _mesh.n_vertices() << std::endl;
-	std::cout << "face number: " << _mesh.n_faces() << std::endl;
+	//std::cout << "vertice number: " << _mesh.n_vertices() << std::endl;
+	//std::cout << "face number: " << _mesh.n_faces() << std::endl;
 	std::cout << "-----------------------------" << std::endl;
 	std::cout << "Embed process starts:" << std::endl;
 
@@ -56,15 +57,13 @@ void scene_extract_wm(string wm_mesh_model, string ori_mesh_model, string ori_wa
 	}
 
 	std::cout << "read watermarked mesh successfully" << std::endl;
-	std::cout << "vertice number: " << _wm_mesh.n_vertices() << std::endl;
-	std::cout << "face number: " << _wm_mesh.n_faces() << std::endl;
+	//std::cout << "vertice number: " << _wm_mesh.n_vertices() << std::endl;
+	//std::cout << "face number: " << _wm_mesh.n_faces() << std::endl;
 	std::cout << "-----------------------------" << std::endl;
 	std::cout << "Extract process starts:" << std::endl;
 
 	MeshWatermark meshWm;
 	meshWm.Init(&_wm_mesh, ori_watermark);//初始化网格相关参数
-						 //meshWm.calLap_Matrix();
-						 //meshWm.normVec();//将特征向量单位化
 	meshWm.extractWatermark(extr_watermark);//提取水印
 	
 	std::cout << "Extract process finished successfully!" << std::endl;
@@ -77,28 +76,32 @@ int main() {
 	std::cout << "Hello world!" << std::endl;
 	
 	/*
-		obj: cow389/deer817/cat1136/wolf1368/goat402/rat425/elephant
+		obj: cow/deer/cat/wolf/goat/rat/elephant
 		wm:  flower/heart
 	*/
-	string obj = "wolf";
+	string obj = "cow";
 	string wm = "flower";
 
 	string ori_mesh = ROOT_PATH + "file\\mesh_models\\original\\lowpoly" + obj + "\\" + obj + ".obj";
 	string wm_mesh = ROOT_PATH + "file\\mesh_models\\watermarked\\" + obj + "-result.obj";
 	//string wm_mesh_attacked = ROOT_PATH + "file\\mesh_models\\watermarked\\" + obj + "-result-laplacianSmoothing.obj";
+	//string wm_mesh_attacked = ROOT_PATH + "file\\mesh_models\\watermarked\\" + obj + "-result-laplacianSmoothing0.1.obj";
 	//string wm_mesh_attacked = ROOT_PATH + "file\\mesh_models\\watermarked\\" + obj + "-result-scale0.8.obj";
+	//string wm_mesh_attacked = ROOT_PATH + "file\\mesh_models\\watermarked\\" + obj + "-result-rotate90x.obj";
+	//string wm_mesh_attacked = ROOT_PATH + "file\\mesh_models\\watermarked\\" + obj + "-result-tbs.obj";
+	//string wm_mesh_attacked = ROOT_PATH + "file\\mesh_models\\watermarked\\" + obj + "-result-tbs0.3.obj";
 	string wm_mesh_attacked = ROOT_PATH + "file\\mesh_models\\watermarked\\" + obj + "-result-rotate90x.obj";
 	string emb_watermark = ROOT_PATH + "file\\wmBinaryImage\\Embed\\" + wm + ".txt";
 	string extr_watermark = ROOT_PATH + "file\\wmBinaryImage\\Extract\\extr_" + wm + "_from_" + obj + ".txt";
-	const int chip_rate = 7;
+	const int chip_rate = 100;
 	const double alpha = 0.005;
 	//执行嵌入
-	//scene_embed_wm(ori_mesh, emb_watermark, wm_mesh, chip_rate, alpha);
+	scene_embed_wm(ori_mesh, emb_watermark, wm_mesh, chip_rate, alpha);
 	//执行提取
-	//scene_extract_wm(wm_mesh, ori_mesh, emb_watermark, extr_watermark);
+	scene_extract_wm(wm_mesh, ori_mesh, emb_watermark, extr_watermark);
 	//对经过攻击的水印模型进行提取
-	scene_extract_wm(wm_mesh_attacked, ori_mesh, emb_watermark, extr_watermark);
-
+	//scene_extract_wm(wm_mesh_attacked, ori_mesh, emb_watermark, extr_watermark);
+	
 	return 0;
 
 }

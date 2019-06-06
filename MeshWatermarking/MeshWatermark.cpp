@@ -1,11 +1,10 @@
 #include "MeshWatermark.h"
 
+
 MeshWatermark::MeshWatermark()
 {
 	m_oriMesh = NULL;
 	m_engine = NULL;//初始化matlab引擎
-	//m_bdyCenter.setZero();
-	//m_meanDis = 0.0;//copy from yuan for segementation
 }
 
 void MeshWatermark::Init(PolygonMesh::Mesh * _mesh, string watermark_path, int c, double a)
@@ -23,13 +22,12 @@ void MeshWatermark::Init(PolygonMesh::Mesh * _mesh, string watermark_path)
 	chip_rate = 7;
 	alpha = 0.005;
 	m_oriMesh = _mesh;
-	//m_wmMesh =_mesh;
 	m_vertexNum = m_oriMesh->n_vertices();
 	wm_path = watermark_path;
 }
 
 //L = D - A
-void MeshWatermark::calLap_Matrix()
+void MeshWatermark::cal_LapMatrix()
 {
 	std::cout << "Calculating Laplacian Matrix..." << std::endl;
 
@@ -39,11 +37,10 @@ void MeshWatermark::calLap_Matrix()
 	A_matrix.setZero(m_vertexNum, m_vertexNum);
 	Lap_matrix.setZero(m_vertexNum, m_vertexNum);//nxn拉普拉斯矩阵
 
-												 //计算度矩阵
 	int v_index = 0;
 	for (auto v_it = m_oriMesh->vertices_begin(); v_it != m_oriMesh->vertices_end(); ++v_it, v_index++)
 	{
-		int vnum = m_oriMesh->valence(*v_it);//获得顶点i的度
+		int vnum = m_oriMesh->valence(*v_it);
 		D_matrix(v_index, v_index) = vnum;
 	}
 
@@ -62,8 +59,6 @@ void MeshWatermark::calLap_Matrix()
 
 	//计算拉普拉斯矩阵
 	Lap_matrix = D_matrix - A_matrix;
-
-	// 使用matlab计算laplacian矩阵及特征值
 	int l_index = 0;
 	double *PL = new double[m_vertexNum*m_vertexNum];
 	for (int l_col = 0; l_col < m_vertexNum; l_col++)
@@ -74,7 +69,7 @@ void MeshWatermark::calLap_Matrix()
 		}
 	}
 
-	if ((!m_engine && !(m_engine = engOpen(NULL))))// 使用matlab算laplacian矩阵及特征值
+	if ((!m_engine && !(m_engine = engOpen(NULL))))
 	{
 		std::cout << "Matlab engine inits failed" << std::endl;
 		return;
@@ -85,25 +80,19 @@ void MeshWatermark::calLap_Matrix()
 	memcpy((void *)mxGetPr(pL), (void *)PL, m_vertexNum*m_vertexNum * sizeof(double));
 	engPutVariable(m_engine, "L", pL);
 
-	engEvalString(m_engine, ("cd('" + ROOT_PATH + "mat_code')").c_str());//调用matalab代码
+	engEvalString(m_engine, ("cd('" + ROOT_PATH + "mat_code')").c_str());
 
-																			//buffer用来接收调试信息，当matlab代码有错时，可以输出buffer查看错误信息
 	char buffer[255];
 	buffer[254] = '\0';
 	engOutputBuffer(m_engine, buffer, 255);
 
 	engEvalString(m_engine, "[eigVector,eigValue] = calcLaplacian(L);");
-
-	printf("%s", buffer);//当matlab代码出错时，用来输出调试信息
-
+	printf("%s", buffer);
 	mxArray * eigenVectorObj = NULL;
 	eigenVectorObj = engGetVariable(m_engine, "eigVector");
 	mxArray * eigenValueObj = NULL;
 	eigenValueObj = engGetVariable(m_engine, "eigValue");
 
-	/*
-	eigenValue矩阵是一个一维矩阵，矩阵元素个数为1180，每个元素是对应的特征值
-	*/
 	double  * eigenVector = NULL;
 	eigenVector = (double*)mxGetData(eigenVectorObj);
 	double  * eigenValue = NULL;
@@ -113,7 +102,7 @@ void MeshWatermark::calLap_Matrix()
 	eVector_iter.resize(m_vertexNum);
 
 	//获取特征向量
-	for (int eig_index = 0; eig_index < m_vertexNum; eig_index++)//把eigenvector赋给m_eigenVector
+	for (int eig_index = 0; eig_index < m_vertexNum; eig_index++)
 	{
 		eVector_iter.setZero();
 		for (int ver_pos = 0; ver_pos < m_vertexNum; ver_pos++)
@@ -135,10 +124,8 @@ void::MeshWatermark::normVec()
 {
 	std::cout << "Normalizing Eigen Vectors..." << std::endl;
 
-	m_normVector = m_eigenVector;//将特征向量复制给将要单位化的向量
-	VectorXd  normV(m_vertexNum);//声明一个Eigen中的vector类型的临时变量，用来存储一个单独的特征向量
-
-	//每次将一个特征向量复制给中间变量normV，然后normV调用单位化函数，再将normV赋给m_normVector
+	m_normVector = m_eigenVector;
+	VectorXd  normV(m_vertexNum);
 	for (int index = 0; index < m_vertexNum; index++)
 	{
 		normV = m_normVector[index];
@@ -149,16 +136,13 @@ void::MeshWatermark::normVec()
 
 //将顶点坐标投影到特征向量上，修改频谱系数，然后将频谱系数反变换到原始坐标中
 //计算频谱系数
-bool MeshWatermark::calR_Matrix()
+bool MeshWatermark::cal_SCMatrix()
 {
 	std::cout << "Calculating spectral coefficient matrix..." << std::endl;
 
-	//顶点坐标
 	VectorXd xCoordinate(m_vertexNum);
 	VectorXd yCoordinate(m_vertexNum);
 	VectorXd zCoordinate(m_vertexNum);
-
-	//将顶点坐标赋值给VectorXd
 	int j = 0;
 	for (auto vit = m_oriMesh->vertices_begin(); vit != m_oriMesh->vertices_end(); ++vit, j++)
 	{
@@ -169,12 +153,11 @@ bool MeshWatermark::calR_Matrix()
 		zCoordinate[j] = t_p[2];
 	}
 
-	//计算顶点坐标矩阵V_matrix
+	//计算顶点坐标矩阵
 	V_matrix.setZero(m_vertexNum, 3);
-	V_matrix.col(0) = xCoordinate;//V_matrix是顶点坐标矩阵，nx3
+	V_matrix.col(0) = xCoordinate;
 	V_matrix.col(1) = yCoordinate;
 	V_matrix.col(2) = zCoordinate;
-
 	int vetex_index = 0;
 	double *vetex_coor = new double[m_vertexNum * 3];
 	for (int col_index = 0; col_index < 3; col_index++)
@@ -185,11 +168,11 @@ bool MeshWatermark::calR_Matrix()
 		}
 	}
 
-	//计算特征向量矩阵E_matrix
+	//计算特征向量矩阵
 	E_matrix.setZero(m_vertexNum, m_vertexNum);
 	for (int e_index = 0; e_index < m_vertexNum; e_index++)
 	{
-		E_matrix.col(e_index) = m_normVector[e_index];//E_matrix是特征向量矩阵，nxn
+		E_matrix.col(e_index) = m_normVector[e_index];
 	}
 
 	int eig_index = 0;
@@ -217,27 +200,20 @@ bool MeshWatermark::calR_Matrix()
 		}
 	}
 	NormEfile.close();
-
-	/*调用matlab计算频谱系数矩阵R_matrix*/
-	mxArray *Vetex_Coor = mxCreateDoubleMatrix(m_vertexNum, 3, mxREAL);//把网格顶点坐标矩阵传入matlab
+	mxArray *Vetex_Coor = mxCreateDoubleMatrix(m_vertexNum, 3, mxREAL);
 	mxArray *Eigen_vetor = mxCreateDoubleMatrix(m_vertexNum, m_vertexNum, mxREAL);
-
 	memcpy((void *)mxGetPr(Eigen_vetor), (void *)eigVec, (m_vertexNum * m_vertexNum) * sizeof(double));
 	memcpy((void *)mxGetPr(Vetex_Coor), (void *)vetex_coor, (m_vertexNum * 3) * sizeof(double));
-
-	engPutVariable(m_engine, "A", Eigen_vetor);//矩阵方程为AX = B,其中A = E_matrix， X = R_matrix， B = V_matrix
+	engPutVariable(m_engine, "A", Eigen_vetor);
 	engPutVariable(m_engine, "B", Vetex_Coor);
 
-	//buffer用来接收调试信息，当matlab代码有错时，可以输出buffer查看错误信息
 	char buffer[255];
 	buffer[254] = '\0';
 	engOutputBuffer(m_engine, buffer, 255);
 
 	engEvalString(m_engine, ("cd('" + ROOT_PATH + "mat_code')").c_str());//shenzhen
 	engEvalString(m_engine, "R = calcR(A, B);");
-
-	printf("%s", buffer);//当matlab代码出错时，用来输出调试信息
-
+	printf("%s", buffer);
 	mxArray * r_matrix = NULL;
 	r_matrix = engGetVariable(m_engine, "R");
 	double  * Rmatrix = NULL;
@@ -256,21 +232,15 @@ bool MeshWatermark::calR_Matrix()
 	mxDestroyArray(Vetex_Coor);
 	mxDestroyArray(Eigen_vetor);
 	mxDestroyArray(r_matrix);
-	// 测试时不用关闭
-	/*if (m_engine)
-	{
-	engClose(m_engine);
-	m_engine = NULL;
-	}*/
 
 	return true;
 }
 
 bool MeshWatermark::embedWatermark()
 {
-	calLap_Matrix(); // @firejq: 计算网格的拉普拉斯矩阵并调用matlab进行特征值分解
+	cal_LapMatrix(); //计算网格的拉普拉斯矩阵并调用matlab进行特征值分解
 	normVec();//将特征向量单位化
-	calR_Matrix();//@firejq: 将顶点坐标投影到特征向量上得到频谱系数矩阵，然后根据水印修改频谱系数，再将频谱系数反变换到原始坐标中
+	cal_SCMatrix();//将顶点坐标投影到特征向量上得到频谱系数矩阵，然后根据水印修改频谱系数，再将频谱系数反变换到原始坐标中
 
 	std::cout << "Embing watermark..." << std::endl;
 
@@ -305,14 +275,50 @@ bool MeshWatermark::embedWatermark()
 	wmSeq.createWB(m_vertexNum);//创建水印序列
 	wmSeq.createP();//创建伪随机序列 (PRNS)
 
-	//将水印序列赋值到频谱系数坐标Rs/Rt/Ru中，得到修改后的频谱系数坐标Rs_hat/Rt_hat/Ru_hat
-	//vecB的长度是1188，和m_vertexNum不一样，因此如果len_VecB>len_m_vertexNum，会丢失一部分水印信息，因此要求len_VecB<=len_m_vertexNum
+	//此处对频谱系数矩阵进行排序
+	priority_queue<heapNode, vector<heapNode>, cmp> pqs;
+	priority_queue<heapNode, vector<heapNode>, cmp> pqt;
+	priority_queue<heapNode, vector<heapNode>, cmp> pqu;
 	for (int i_for_get = 0; i_for_get < m_vertexNum; i_for_get++)
 	{
-		Rs_hat[i_for_get] = Rs[i_for_get] + wmSeq.vecB[i_for_get] * wmSeq.P[i_for_get] * wmSeq.alpha;//Rs[i]' = Rs[i] + bi' . pi . a 
-		Rt_hat[i_for_get] = Rt[i_for_get] + wmSeq.vecB[i_for_get] * wmSeq.P[i_for_get] * wmSeq.alpha;
-		Ru_hat[i_for_get] = Ru[i_for_get] + wmSeq.vecB[i_for_get] * wmSeq.P[i_for_get] * wmSeq.alpha;
+		heapNode node(i_for_get, Rs[i_for_get]);
+		pqs.push(node);
 	}
+	for (int i_for_get = 0; i_for_get < m_vertexNum; i_for_get++)
+	{
+		heapNode node(i_for_get, Rt[i_for_get]);
+		pqt.push(node);
+	}
+	for (int i_for_get = 0; i_for_get < m_vertexNum; i_for_get++)
+	{
+		heapNode node(i_for_get, Ru[i_for_get]);
+		pqu.push(node);
+	}
+	
+	//在每一位水印值嵌入时，都从其所在频域坐标轴对于的最小堆中取得当前最低频率值对于的顶点索引
+	//再将该位水印值嵌入到该索引位置的对应频谱系数分量上
+	for (int i_for_get = 0; i_for_get < wmSeq.wmSeqLength; i_for_get += 3)
+	{
+		heapNode nodeS = pqs.top();
+		pqs.pop();
+		Rs_hat[nodeS.index] = Rs[nodeS.index] + wmSeq.vecB[i_for_get] * wmSeq.P[i_for_get] * wmSeq.alpha;
+		heapNode nodeT = pqt.top();
+		pqt.pop();
+		Rt_hat[nodeT.index] = Rt[nodeT.index] + wmSeq.vecB[i_for_get + 1] * wmSeq.P[i_for_get + 1] * wmSeq.alpha;
+		heapNode nodeU = pqu.top();
+		pqu.pop();
+		Ru_hat[nodeU.index] = Ru[nodeU.index] + wmSeq.vecB[i_for_get + 2] * wmSeq.P[i_for_get + 2] * wmSeq.alpha;
+
+	}
+
+	////将水印序列赋值到频谱系数坐标Rs/Rt/Ru中，得到修改后的频谱系数坐标Rs_hat/Rt_hat/Ru_hat
+	////vecB的长度是1188，和m_vertexNum不一样，因此如果len_VecB>len_m_vertexNum，会丢失一部分水印信息，因此要求len_VecB<=len_m_vertexNum
+	//for (int i_for_get = 0; i_for_get < m_vertexNum; i_for_get++)
+	//{
+	//	Rs_hat[i_for_get] = Rs[i_for_get] + wmSeq.vecB[i_for_get] * wmSeq.P[i_for_get] * wmSeq.alpha;//Rs[i]' = Rs[i] + bi' . pi . a 
+	//	Rt_hat[i_for_get] = Rt[i_for_get] + wmSeq.vecB[i_for_get] * wmSeq.P[i_for_get] * wmSeq.alpha;
+	//	Ru_hat[i_for_get] = Ru[i_for_get] + wmSeq.vecB[i_for_get] * wmSeq.P[i_for_get] * wmSeq.alpha;
+	//}
 
 	/**
 	将原始网格的频谱系数R矩阵写入文件中，
@@ -420,21 +426,6 @@ bool MeshWatermark::extractWatermark(string extr_watermark)
 	}
 
 	E_matrix.setZero(m_vertexNum, m_vertexNum);
-	//调用matlab计算特征向量
-	//for ( int e_index = 0; e_index< m_vertexNum; e_index++)
-	//{ 
-	//	E_matrix.col(e_index) = m_normVector[e_index];//E_matrix是特征向量矩阵，nxn
-	//}
-
-	//int eig_index = 0;
-	//double *eigVec = new double[m_vertexNum*m_vertexNum];
-	//for (int axi_col = 0; axi_col < m_vertexNum; axi_col++ )
-	//{
-	//	for ( int axi_row =0; axi_row < m_vertexNum; axi_row++)
-	//	{	
-	//		eigVec[eig_index++] = E_matrix(axi_row,axi_col);
-	//	}
-	//}
 
 	//从文件中将原始网格的E矩阵读取出来
 	std::cout << "Reading NormEigenVector of original mesh..." << std::endl;
@@ -524,7 +515,6 @@ bool MeshWatermark::extractWatermark(string extr_watermark)
 	mxDestroyArray(Vetex_Coor);
 	mxDestroyArray(Eigen_vetor);
 	mxDestroyArray(r_matrix);
-	// 测试时不用关闭
 	if (m_engine)
 	{
 		engClose(m_engine);
@@ -643,21 +633,73 @@ bool MeshWatermark::extractWatermark(string extr_watermark)
 	}
 	Pfile.close();
 
-
+	//计算水印序列矩阵
 	std::cout << "Calculating the extracted watermark sequence..." << std::endl;
 	double *Qx = new double[m_vertexNum];
 	double *Qy = new double[m_vertexNum];
 	double *Qz = new double[m_vertexNum];
-	double *Q = new double[m_vertexNum];
 
 	for (int qi = 0; qi < m_vertexNum; qi++)
 	{
 		Qx[qi] = chip_rate * (wRs[qi] - pRs[qi]) * P[qi];
 		Qy[qi] = chip_rate * (wRt[qi] - pRt[qi]) * P[qi];
 		Qz[qi] = chip_rate * (wRu[qi] - pRu[qi]) * P[qi];
-		Q[qi] = 1 / 3.0 * (Qx[qi] + Qy[qi] + Qz[qi]);
+	}
+	//构建三个以索引和分量值的键值对为项的最小堆
+	//每次以 s、t、u 的顺序分别从最小堆中取出当前系数的最小值对应的索引项
+	priority_queue<heapNode, vector<heapNode>, cmp> pqs;
+	priority_queue<heapNode, vector<heapNode>, cmp> pqt;
+	priority_queue<heapNode, vector<heapNode>, cmp> pqu;
+	for (int i_for_get = 0; i_for_get < m_vertexNum; i_for_get++)
+	{
+		heapNode node(i_for_get, pRs[i_for_get]);
+		pqs.push(node);
+	}
+	for (int i_for_get = 0; i_for_get < m_vertexNum; i_for_get++)
+	{
+		heapNode node(i_for_get, pRt[i_for_get]);
+		pqt.push(node);
+	}
+	for (int i_for_get = 0; i_for_get < m_vertexNum; i_for_get++)
+	{
+		heapNode node(i_for_get, pRu[i_for_get]);
+		pqu.push(node);
 	}
 
+	double *rQx = new double[m_vertexNum];
+	double *rQy = new double[m_vertexNum];
+	double *rQz = new double[m_vertexNum];
+	double *Q = new double[m_vertexNum * 3];
+
+	for (int i = 0; i < m_vertexNum; i++)
+	{
+		heapNode nodeS = pqs.top();
+		pqs.pop();
+		rQx[i] = Qx[nodeS.index];
+
+		heapNode nodeT = pqt.top();
+		pqt.pop();
+		rQy[i] = Qy[nodeT.index];
+
+		heapNode nodeU = pqu.top();
+		pqu.pop();
+		rQz[i] = Qz[nodeU.index];
+	}
+	//以光栅顺序将水印矩阵转换为一维的水印序列
+	for (int i = 0; i < m_vertexNum; i++)
+	{
+		Q[i * 3] = rQx[i];
+		Q[i * 3 + 1] = rQy[i];
+		Q[i * 3 + 2] = rQz[i];
+	}
+
+	//for (int qi = 0; qi < m_vertexNum; qi++)
+	//{
+	//	Qx[qi] = chip_rate * (wRs[qi] - pRs[qi]) * P[qi];
+	//	Qy[qi] = chip_rate * (wRt[qi] - pRt[qi]) * P[qi];
+	//	Qz[qi] = chip_rate * (wRu[qi] - pRu[qi]) * P[qi];
+	//	Q[qi] = 1 / 3.0 * (Qx[qi] + Qy[qi] + Qz[qi]);
+	//}
 
 	double * wB = new double[m_vertexNum];
 	for (int i = 0; i < m_vertexNum; i++)
@@ -665,7 +707,7 @@ bool MeshWatermark::extractWatermark(string extr_watermark)
 		wB[i] = _copysign(1.0, Q[i]);
 	}
 
-	//@firejq: 将提取出的水印序列写到文件，方便调试时查看
+	//将提取出的水印序列写到文件，方便调试时查看
 	ofstream Wb_extract;
 	Wb_extract.open(ROOT_PATH + "file\\tmp\\extr_WmSeq.txt", ios_base::out);
 	if (Wb_extract)
@@ -719,11 +761,6 @@ bool MeshWatermark::extractWatermark(string extr_watermark)
 		}
 	}
 	double corr = Bcounter / (double)m_vertexNum;
-	//for debug
-	//std::cout << Bcounter << std::endl;
-	//std::cout << m_vertexNum << std::endl;
-	//std::cout << corr << std::endl;
-
 	std::cout << "The comparing result is: 【" << (corr == 1 ? "true" : "false") << "】" << std::endl;
 
 	WatermarkSeq wmSeq;
@@ -778,16 +815,16 @@ bool MeshWatermark::extractWatermark(string extr_watermark)
 
 /*内部类WatermarkSeq定义*/
 //原始水印位数
-void MeshWatermark::WatermarkSeq::setM(int m_m)
+void MeshWatermark::WatermarkSeq::setM(int length)
 {
-	//cout << m_m << endl;
-	m = m_m;
+	//cout << length << endl;
+	m = length;
 }
 
 //码片速率
-void MeshWatermark::WatermarkSeq::setC(int m_c)
+void MeshWatermark::WatermarkSeq::setC(int chip)
 {
-	c = m_c;
+	c = chip;
 }
 
 
@@ -879,7 +916,6 @@ void MeshWatermark::WatermarkSeq::createWB(int m_vertexNum)
 		vecB.push_back(B[i] == 0 ? -1 : 1);
 	}
 
-	//@firejq
 	//若水印长度小于顶点个数，这里先将水印长度用1补全，使得水印长度等于顶点个数
 	//在提取水印的时候再去除这部分补全的长度即可
 	if (wmSeqLength < m_vertexNum) {

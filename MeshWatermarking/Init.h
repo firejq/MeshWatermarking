@@ -2,6 +2,7 @@
 #ifndef _INIT_H_
 #define _INIT_H_  
 
+
 /********c++ headers********/
 #include <iostream>
 #include <vector>
@@ -9,9 +10,11 @@
 #include <algorithm>
 #include <fstream>
 #include <sstream>
+#include <queue>
 using std::vector;
 using std::string;
 using std::pair;
+using std::priority_queue;
 using std::cout;
 using std::endl;
 using std::ifstream;
@@ -26,21 +29,14 @@ using std::ios_base;
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 namespace PolygonMesh
 {
-	/** this structure defines the traits of the mesh
-	*/
 	struct CustomTraits : OpenMesh::DefaultTraits
 	{
-		// let Point and Normal be a vector made from doubles
 		typedef OpenMesh::Vec3d Point;
 		typedef OpenMesh::Vec3d Normal;
-
-		// add normal property to vertices and faces
 		VertexAttributes(OpenMesh::Attributes::Normal | OpenMesh::Attributes::Color | OpenMesh::Attributes::Status);
 		FaceAttributes(OpenMesh::Attributes::Normal);
 		HalfedgeAttributes(OpenMesh::Attributes::PrevHalfedge);
 	};
-
-	//typedef OpenMesh::TriMesh_ArrayKernelT<CustomTraits>  TriangularMesh;
 	typedef OpenMesh::PolyMesh_ArrayKernelT<CustomTraits> Mesh;
 
 }
