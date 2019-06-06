@@ -17,7 +17,7 @@
 
 # MeshWatermarking
 
-This project implemented [a digital watermarking algorithm](http://graphicsinterface.org/proceedings/gi2001/gi2001-2/) for 3D Meshes based on spectral domain spectral coefficient perturbation. In addition, based on previous studies, the original algorithm is improved from watermark generation, watermark capacity and robustness against smooth attacks.
+This project implemented [a digital watermarking algorithm](http://graphicsinterface.org/wp-content/uploads/gi2001-2.pdf) for 3D Meshes based on spectral domain spectral coefficient perturbation. In addition, based on previous studies, the original algorithm is improved from watermark generation, watermark capacity and robustness against smooth attacks.
 
 Experimental analysis shows that the improved algorithm can improve the watermark capacity and robustness against smooth attacks under the premise of maintaining good transparency.
 
